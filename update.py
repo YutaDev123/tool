@@ -244,7 +244,7 @@ def get_public_ip():
         return "IP_FETCH_ERROR"
 
 # Khai báo các biến toàn cục (HWID KHÔNG IN RA)
-GLOBAL_HWID = get_hwid() 
+GLOBAL_HWID = get_stable_hwid()
 GLOBAL_IP = get_public_ip()
 
 # Hàm in thông tin key sau khi xác minh thành công
