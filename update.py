@@ -206,32 +206,32 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
 # Hàm Lấy HWID
 def get_stable_hwid():
     """
-    Tạo HWID bằng cách kết hợp thông số ổn định nhất (MAC và Node Name) 
-    và dùng hàm băm SHA256.
+    Tạo HWID bằng cách sử dụng đường dẫn thư mục Home (Environment Fingerprint) 
+    và kết hợp với định danh máy để tăng tính duy nhất.
     """
     try:
-        # Lấy địa chỉ MAC (Thường ổn định nhất, ngay cả trong môi trường ảo)
-        mac_addr = hex(uuid.getnode()) 
-        
-        # Lấy tên Node/máy. Trên Termux, giá trị này thường không đổi.
+        # Lấy tên node/máy (còn lại của logic cũ)
         node_name = platform.node() 
         
-        # Kết hợp các thông số và thêm một salt (muối) cố định để tăng độ duy nhất
-        raw_hwid_string = f"{mac_addr}-{node_name}-BUMX_V1"
+        # 🔑 Lấy đường dẫn thư mục Home (~): Rất ổn định trên Termux
+        home_path = os.path.expanduser('~') 
+        
+        # Kết hợp các thông số ổn định nhất và băm
+        # Sử dụng chuỗi 'TERMUX_V4' để đảm bảo HWID này khác biệt so với các lần thử trước
+        raw_hwid_string = f"{node_name}-{home_path}-TERMUX_V4"
 
-        # Băm (Hash) chuỗi đó bằng SHA256 
+        # Băm (Hash) để tạo HWID duy nhất và bảo mật
         final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
         
         return final_hwid
     except Exception as e:
-        # Sử dụng UUID ngẫu nhiên dự phòng nếu lỗi (dù rất hiếm)
-        return str(uuid.uuid4()) 
-        
-# ----------------------------------------------------------------------
-# CÁCH SỬ DỤNG: 
-my_hwid = get_stable_hwid() 
-# ----------------------------------------------------------------------
+        # Nếu lỗi (rất hiếm), fallback về UUID ngẫu nhiên
+        return hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()
 
+# ----------------------------------------------------------------------
+# CÁCH SỬ DỤNG VẪN GIỮ NGUYÊN: 
+# my_hwid = get_stable_hwid() 
+# ----------------------------------------------------------------------
 # Hàm Lấy IP
 def get_public_ip():
     try:
