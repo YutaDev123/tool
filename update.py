@@ -204,14 +204,33 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
         return {"valid": False, "message": f"Lỗi không xác định: {e}"}
 
 # Hàm Lấy HWID
-def get_hwid():
+def get_stable_hwid():
+    """
+    Tạo HWID bằng cách kết hợp thông số ổn định nhất (MAC và Node Name) 
+    và dùng hàm băm SHA256.
+    """
     try:
-        node = uuid.getnode()
-        hwid_raw = f"{node}-{platform.system()}-{platform.machine()}"
-        hwid_hashed = hashlib.sha256(hwid_raw.encode('utf-8')).hexdigest()
-        return hwid_hashed
-    except Exception:
-        return "ERROR_HWID_GEN" 
+        # Lấy địa chỉ MAC (Thường ổn định nhất, ngay cả trong môi trường ảo)
+        mac_addr = hex(uuid.getnode()) 
+        
+        # Lấy tên Node/máy. Trên Termux, giá trị này thường không đổi.
+        node_name = platform.node() 
+        
+        # Kết hợp các thông số và thêm một salt (muối) cố định để tăng độ duy nhất
+        raw_hwid_string = f"{mac_addr}-{node_name}-BUMX_V1"
+
+        # Băm (Hash) chuỗi đó bằng SHA256 
+        final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
+        
+        return final_hwid
+    except Exception as e:
+        # Sử dụng UUID ngẫu nhiên dự phòng nếu lỗi (dù rất hiếm)
+        return str(uuid.uuid4()) 
+        
+# ----------------------------------------------------------------------
+# CÁCH SỬ DỤNG: 
+my_hwid = get_stable_hwid() 
+# ----------------------------------------------------------------------
 
 # Hàm Lấy IP
 def get_public_ip():
