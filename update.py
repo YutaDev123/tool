@@ -191,7 +191,7 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
     }
     
     try:
-        response = requests.post(API_URL, params=params, timeout=8)
+        response = requests.post(API_URL, data=params, timeout=30)
         response.raise_for_status() 
         api_res = response.json()
         return api_res
