@@ -82,19 +82,34 @@ def banner():
     print(rgb(255, 255, 255, "💡Đói quá phải vì miếng cơm💡"))
     print(rgb(255, 255, 255, "═" * 64))
     print()
+# Tên file cờ (flag file)
+TERMUX_FLAG_FILE = '.termux_api_ok'
+
+# 🔑 KIỂM TRA TẠI ĐÂY
 if platform.system() == 'Linux' and 'TERMUX_VERSION' in os.environ:
-    # Cần import time ở đầu file
-    import time 
     
-    print(rgb(5, 255, 255, '>> Kiểm tra gói Termux API...'))
-    try:
-        # Lệnh cài đặt termux-api
-        subprocess.check_call(['pkg', 'install', 'termux-api', '-y'])
-        print(rgb(5, 255, 0, '>> Termux API đã sẵn sàng.'))
-    except Exception as e:
-        print(rgb(255, 0, 0, '>> Lỗi khi cài đặt termux-api!'))
-        print(rgb(255, 255, 0, '>> Vui lòng chạy lệnh: pkg install termux-api -y thủ công.'))
-        time.sleep(3)
+    
+    if os.path.exists(TERMUX_FLAG_FILE):
+
+        pass 
+    else:
+        
+        print(rgb(5, 255, 255, '>> Đang kiểm tra/cài đặt API...'))
+        try:
+            # Lệnh cài đặt termux-api
+            subprocess.check_call(['pkg', 'install', 'termux-api', '-y'])
+            
+            # CÀI ĐẶT THÀNH CÔNG: TẠO FILE CỜ
+            with open(TERMUX_FLAG_FILE, 'w') as f:
+                f.write('OK')
+            
+            print(rgb(5, 255, 0, '>>API đã sẵn sàng'))
+            time.sleep(2)
+            
+        except Exception as e:
+            print(rgb(255, 0, 0, f'>> Lỗi khi cài đặtapi: {e}'))
+            print(rgb(255, 255, 0, '>> Vui lòng chạy lệnh: pkg install termux-api'))
+            time.sleep(3)
 def decode_base64(encoded_str):
     decoded_bytes = base64.b64decode(encoded_str)
     decoded_str = decoded_bytes.decode('utf-8')
