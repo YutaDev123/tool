@@ -38,18 +38,6 @@ except ImportError:
     print('__Cài đặt hoàn tất, vui lòng chạy lại Tool__')
     sys.exit()
 
-# 🔑 THÊM KHỐI CODE KIỂM TRA VÀ CÀI ĐẶT TERMUX-API TẠI ĐÂY
-if platform.system() == 'Linux' and 'TERMUX_VERSION' in os.environ:
-    print(rgb(5, 255, 255, '>> Kiểm tra gói Termux API...'))
-    try:
-        # Lệnh cài đặt termux-api
-        subprocess.check_call(['pkg', 'install', 'termux-api', '-y'])
-        print(rgb(5, 255, 0, '>> Termux API đã sẵn sàng.'))
-    except Exception as e:
-        print(rgb(255, 0, 0, '>> Lỗi khi cài đặt termux-api!'))
-        print(rgb(255, 255, 0, '>> Vui lòng chạy lệnh: pkg install termux-api -y'))
-        time.sleep(3) 
-
 
 
 def clear_screen():
@@ -94,7 +82,19 @@ def banner():
     print(rgb(255, 255, 255, "💡Đói quá phải vì miếng cơm💡"))
     print(rgb(255, 255, 255, "═" * 64))
     print()
-
+if platform.system() == 'Linux' and 'TERMUX_VERSION' in os.environ:
+    # Cần import time ở đầu file
+    import time 
+    
+    print(rgb(5, 255, 255, '>> Kiểm tra gói Termux API...'))
+    try:
+        # Lệnh cài đặt termux-api
+        subprocess.check_call(['pkg', 'install', 'termux-api', '-y'])
+        print(rgb(5, 255, 0, '>> Termux API đã sẵn sàng.'))
+    except Exception as e:
+        print(rgb(255, 0, 0, '>> Lỗi khi cài đặt termux-api!'))
+        print(rgb(255, 255, 0, '>> Vui lòng chạy lệnh: pkg install termux-api -y thủ công.'))
+        time.sleep(3)
 def decode_base64(encoded_str):
     decoded_bytes = base64.b64decode(encoded_str)
     decoded_str = decoded_bytes.decode('utf-8')
