@@ -23,7 +23,7 @@ try:
     from tabulate import tabulate
 # ... (Phần code hiện tại trong file update.py) ...
 except ImportError:
-    print('__Đang cài đặt các thư viện cần thiết, vui lòng chờ...')
+    print('__Đang cài đặt các thư viện cần thiết, vui lòng chờ...__')
     subprocess.check_call([
         sys.executable, 
         "-m", 
@@ -236,29 +236,60 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
 # Hàm Lấy HWID
 def get_stable_hwid():
     """
-    Tạo HWID bằng cách ưu tiên SỬ DỤNG DUY NHẤT Đường dẫn Home (~), 
-    là thông số ổn định nhất trong Termux. (V12 FINAL)
+    Tạo HWID bằng cách ưu tiên sử dụng Android Serial Number (getprop),
+    là thông số hệ thống không bị trùng khi clone môi trường. (V16 FINAL)
     """
+    unique_system_id = None
+    
     try:
-        # 1. Thông số ổn định nhất: Home Directory Path
+        # 1. Thử lấy Android Serial Number (ro.serialno)
+        # Lệnh getprop là lệnh Linux cơ bản, thường hoạt động mà không cần termux-api.
+        result = subprocess.run(
+            ['getprop', 'ro.serialno'], 
+            capture_output=True, 
+            text=True, 
+            timeout=3,
+            check=True # Báo lỗi nếu lệnh không thành công
+        )
+        serial_no = result.stdout.strip()
+        
+        # Nếu Serial Number có giá trị hợp lệ
+        if serial_no and len(serial_no) > 5 and serial_no != "unknown":
+            unique_system_id = serial_no
+            
+        else:
+            # Fallback sang Build ID nếu Serial Number không có (ro.build.id)
+            result = subprocess.run(
+                ['getprop', 'ro.build.id'], 
+                capture_output=True, 
+                text=True, 
+                timeout=3,
+                check=True 
+            )
+            build_id = result.stdout.strip()
+            if build_id:
+                unique_system_id = build_id
+                
+    except subprocess.CalledProcessError:
+        # Lỗi khi chạy lệnh getprop (không tìm thấy lệnh hoặc bị từ chối)
+        pass 
+    except (FileNotFoundError, TimeoutError):
+        # Lỗi hệ thống khác
+        pass
+
+    # 2. Fallback nếu không lấy được Serial/Build ID (Sử dụng môi trường cơ bản)
+    if not unique_system_id:
+        print("ID hệ thống thất bại")
+        # Sử dụng Home Path và Node Name (thông số đã bị trùng, nhưng là cách cuối cùng)
         home_path = os.path.expanduser('~') 
-        
-        # Thêm một salt để đảm bảo HWID mới
-        raw_hwid_string = f"{home_path}-V12_ULTRA_STABLE_HOME_PATH" 
+        node_name = platform.node()         
+        unique_system_id = f"{node_name}-{home_path}" 
 
-        # 2. Băm (Hash)
-        final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
-        
-        return final_hwid
-
-    except Exception as e:
-        # ⚠️ KHÔNG BAO GIỜ DÙNG UUID.UUID4 HOẶC BẤT KỲ DỮ LIỆU CÓ THỂ RANDOM NÀO
-        # Nếu Home Path bị lỗi khi đọc (cực kỳ hiếm), fallback về một HWID dự phòng tĩnh
-        # Điều này đảm bảo HWID sẽ luôn giống nhau, dù có thể bị trùng với máy khác nếu lỗi tương tự.
-        print(f"HWID: Lỗi  khi đọc Path: {e}.")
-        
-        # Chuỗi băm tĩnh dựa trên tên Tool của bạn
-        return hashlib.sha256("FINAL_TOOL_STATIC_HWID_ID_KHOINGUYEN".encode()).hexdigest()
+    # 3. Hash Final
+    raw_hwid_string = f"{unique_system_id}-V16_GETPROP_FIX"
+    final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
+    
+    return final_hwid
 # Hàm Lấy IP
 def get_public_ip():
     try:
