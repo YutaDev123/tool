@@ -236,57 +236,53 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
 # Hàm Lấy HWID
 def get_stable_hwid():
     """
-    Tạo HWID bằng cách ưu tiên sử dụng Android Serial Number (getprop),
-    là thông số hệ thống không bị trùng khi clone môi trường. (V16 FINAL)
+    Tạo HWID bằng cách ưu tiên sử dụng Android Serial Number (getprop), 
+    đảm bảo không crash bằng cách xử lý triệt để lỗi subprocess. (V16 Secure)
     """
     unique_system_id = None
     
+    # 1. Thử lấy Android Serial Number
     try:
-        # 1. Thử lấy Android Serial Number (ro.serialno)
-        # Lệnh getprop là lệnh Linux cơ bản, thường hoạt động mà không cần termux-api.
+        # ⚠️ Bỏ check=True để ngăn CRASH khi lệnh thất bại
         result = subprocess.run(
             ['getprop', 'ro.serialno'], 
             capture_output=True, 
             text=True, 
             timeout=3,
-            check=True # Báo lỗi nếu lệnh không thành công
+            # check=True BỊ LOẠI BỎ Ở ĐÂY
         )
         serial_no = result.stdout.strip()
         
-        # Nếu Serial Number có giá trị hợp lệ
-        if serial_no and len(serial_no) > 5 and serial_no != "unknown":
+        # Kiểm tra mã thoát (Return Code)
+        if result.returncode == 0 and serial_no and len(serial_no) > 5 and serial_no != "unknown":
             unique_system_id = serial_no
             
         else:
-            # Fallback sang Build ID nếu Serial Number không có (ro.build.id)
+            # Serial Number thất bại, chuyển sang Build ID
             result = subprocess.run(
                 ['getprop', 'ro.build.id'], 
                 capture_output=True, 
                 text=True, 
                 timeout=3,
-                check=True 
             )
-            build_id = result.stdout.strip()
-            if build_id:
-                unique_system_id = build_id
+            if result.returncode == 0 and result.stdout.strip():
+                unique_system_id = result.stdout.strip()
                 
-    except subprocess.CalledProcessError:
-        # Lỗi khi chạy lệnh getprop (không tìm thấy lệnh hoặc bị từ chối)
+    except Exception as e:
+        # Bắt các lỗi khác (ví dụ: FileNotFoundError, TimeoutError)
+        print(f"HWID DEBUG: Lỗi khi chạy getprop: {e}") 
         pass 
-    except (FileNotFoundError, TimeoutError):
-        # Lỗi hệ thống khác
-        pass
 
-    # 2. Fallback nếu không lấy được Serial/Build ID (Sử dụng môi trường cơ bản)
+    # 2. Fallback nếu không lấy được Serial/Build ID
     if not unique_system_id:
-        print("ID hệ thống thất bại")
-        # Sử dụng Home Path và Node Name (thông số đã bị trùng, nhưng là cách cuối cùng)
+        print("HWID: Lấy ID hệ thống thất bại, chuyển sang Environment Hash.")
+        # Sử dụng môi trường cơ bản
         home_path = os.path.expanduser('~') 
         node_name = platform.node()         
         unique_system_id = f"{node_name}-{home_path}" 
 
     # 3. Hash Final
-    raw_hwid_string = f"{unique_system_id}-V16_GETPROP_FIX"
+    raw_hwid_string = f"{unique_system_id}-V16_GETPROP_SECURE_FIX"
     final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
     
     return final_hwid
