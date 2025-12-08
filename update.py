@@ -23,7 +23,7 @@ try:
     from tabulate import tabulate
 # ... (Phần code hiện tại trong file update.py) ...
 except ImportError:
-    print('__Đang cài đặt các thư viện cần thiết, vui lòng chờ..._')
+    print('__Đang cài đặt các thư viện cần thiết, vui lòng chờ...__')
     subprocess.check_call([
         sys.executable, 
         "-m", 
@@ -36,7 +36,7 @@ except ImportError:
         "tabulate", 
         "certifi" 
     ])
-    print('__Cài đặt hoàn tất, vui lòng chạy lại Tool')
+    print('__Cài đặt hoàn tất, vui lòng chạy lại Tool__')
     sys.exit()
 
 
@@ -236,31 +236,30 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
 # Hàm Lấy HWID
 def get_stable_hwid():
     """
-    Tạo HWID bằng cách sử dụng MAC Address (uuid.getnode()) và Home Path.
-    Đây là phương pháp ổn định và ít bị trùng nhất. (V9 FINAL)
+    Tạo HWID bằng cách sử dụng thông số môi trường ổn định, 
+    và thay thế UUID ngẫu nhiên bằng chuỗi tĩnh để chống Random HWID. (V10)
     """
     try:
-        # 1. Lấy MAC Address của thiết bị (Độc nhất phần cứng)
-        # uuid.getnode() trả về địa chỉ MAC dạng số nguyên.
-        mac_address = uuid.getnode() 
-        # Chuyển sang chuỗi Hex để dễ dàng so sánh
-        mac_string = f"{mac_address:x}" 
+        # 1. Sử dụng các thông số môi trường ổn định nhất
+        home_path = os.path.expanduser('~') # Đường dẫn Home (ổn định)
+        node_name = platform.node()         # Tên Node/Máy (thường ổn định)
         
-        # 2. Lấy Home Path (Để tăng độ phức tạp và độ ổn định)
-        home_path = os.path.expanduser('~') 
+        # Thêm salt để tránh trùng lặp giữa các phiên bản code
+        raw_hwid_string = f"{node_name}-{home_path}-V10_STABLE_ENV"
 
-        # 3. Kết hợp các yếu tố
-        raw_hwid_string = f"{home_path}-{mac_string}-V9_MAC_FIX" 
-
-        # 4. Băm (Hash)
+        # Băm (Hash)
         final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
         
-        # 💡 DEBUG: Nếu muốn kiểm tra xem chuỗi MAC Address có khác nhau không, bạn có thể print mac_string ra.
-        
         return final_hwid
+
     except Exception as e:
-        # Fallback 
-        return hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()
+        # 2. ⚠️ KHÔNG BAO GIỜ DÙNG UUID.UUID4 (để tránh random HWID)
+        # Nếu phần trên gặp lỗi (rất hiếm), fallback về một HWID dự phòng tĩnh
+        # Điều này đảm bảo HWID sẽ ổn định, dù nó có thể trùng với các máy lỗi khác.
+        print(f"HWID: Lỗi hệ thống khi tạo HWID. Sử dụng HWID dự phòng tĩnh.")
+        
+        # Chuỗi băm tĩnh: Chỉ thay đổi khi bạn đổi Tool
+        return hashlib.sha256("FALLBACK_STATIC_HWID_ID_FOR_YOUR_TOOL_V10".encode()).hexdigest()
 # Hàm Lấy IP
 def get_public_ip():
     try:
