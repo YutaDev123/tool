@@ -23,7 +23,7 @@ try:
     from tabulate import tabulate
 # ... (Phần code hiện tại trong file update.py) ...
 except ImportError:
-    print('__Đang cài đặt các thư viện cần thiết, vui lòng chờ...__')
+    print('__Đang cài đặt các thư viện cần thiết, vui lòng chờ...')
     subprocess.check_call([
         sys.executable, 
         "-m", 
