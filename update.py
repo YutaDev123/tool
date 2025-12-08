@@ -236,30 +236,40 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
 # Hàm Lấy HWID
 def get_stable_hwid():
     """
-    Tạo HWID bằng cách sử dụng thông số môi trường ổn định, 
-    và thay thế UUID ngẫu nhiên bằng chuỗi tĩnh để chống Random HWID. (V10)
+    Tạo HWID bằng cách sử dụng MAC Address (uuid.getnode()) và ID File System của Home Path.
     """
     try:
-        # 1. Sử dụng các thông số môi trường ổn định nhất
-        home_path = os.path.expanduser('~') # Đường dẫn Home (ổn định)
-        node_name = platform.node()         # Tên Node/Máy (thường ổn định)
+        # 1. Lấy MAC Address (Duy nhất phần cứng)
+        # Sẽ thất bại trên nhiều môi trường ảo, nhưng nên thử
+        try:
+            mac_address = uuid.getnode() 
+            mac_string = f"{mac_address:x}"
+        except Exception:
+            mac_string = "MAC_READ_ERROR" # Fallback ổn định, không random
         
-        # Thêm salt để tránh trùng lặp giữa các phiên bản code
-        raw_hwid_string = f"{node_name}-{home_path}-V10_STABLE_ENV"
+        # 2. Lấy Unique File System ID (Khó bị clone hơn Home Path)
+        # Sử dụng os.stat để lấy st_dev (Device ID) của thư mục Home
+        home_path = os.path.expanduser('~')
+        try:
+            stat_info = os.stat(home_path)
+            # st_dev: ID của thiết bị chứa file (ổn định)
+            device_id = str(stat_info.st_dev)
+        except Exception:
+            device_id = "STAT_READ_ERROR"
 
-        # Băm (Hash)
+        # 3. Kết hợp tất cả các yếu tố: Home Path (ổn định nhất) + MAC Address + File System ID
+        # HWID chỉ trùng khi TẤT CẢ 3 yếu tố này giống nhau.
+        raw_hwid_string = f"{home_path}-{mac_string}-{device_id}-V11_ULTRA_FIX" 
+
         final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
         
         return final_hwid
 
-    except Exception as e:
-        # 2. ⚠️ KHÔNG BAO GIỜ DÙNG UUID.UUID4 (để tránh random HWID)
-        # Nếu phần trên gặp lỗi (rất hiếm), fallback về một HWID dự phòng tĩnh
-        # Điều này đảm bảo HWID sẽ ổn định, dù nó có thể trùng với các máy lỗi khác.
-        print(f"HWID: Lỗi hệ thống khi tạo HWID. Sử dụng HWID dự phòng tĩnh.")
-        
-        # Chuỗi băm tĩnh: Chỉ thay đổi khi bạn đổi Tool
-        return hashlib.sha256("FALLBACK_STATIC_HWID_ID_FOR_YOUR_TOOL_V10".encode()).hexdigest()
+    except Exception:
+        # KHỐI DỰ PHÒNG TĨNH CUỐI CÙNG (Dù lỗi vẫn ra HWID ổn định)
+        print("Lỗikhi tạo HWID")
+        # Đây là lỗi chỉ xảy ra khi os.stat và uuid.getnode() đều lỗi
+        return hashlib.sha256("FINAL_STATIC_FALLBACK_HWID_V11".encode()).hexdigest()
 # Hàm Lấy IP
 def get_public_ip():
     try:
