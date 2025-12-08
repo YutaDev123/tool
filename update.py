@@ -36,7 +36,7 @@ except ImportError:
         "tabulate", 
         "certifi" 
     ])
-    print('__Cài đặt hoàn tất, vui lòng chạy lại Tool_')
+    print('__Cài đặt hoàn tất, vui lòng chạy lại Tool')
     sys.exit()
 
 
