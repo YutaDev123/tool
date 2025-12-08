@@ -23,7 +23,7 @@ try:
     from tabulate import tabulate
 # ... (Phần code hiện tại trong file update.py) ...
 except ImportError:
-    print('__Đang cài đặt các thư viện cần thiết, vui lòng chờ...')
+    print('__Đang cài đặt các thư viện cần thiết, vui lòng chờ...__')
     subprocess.check_call([
         sys.executable, 
         "-m", 
@@ -36,7 +36,7 @@ except ImportError:
         "tabulate", 
         "certifi" 
     ])
-    print('__Cài đặt hoàn tất, vui lòng chạy lại Tool')
+    print('__Cài đặt hoàn tất, vui lòng chạy lại Tool__')
     sys.exit()
 
 
@@ -236,40 +236,29 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
 # Hàm Lấy HWID
 def get_stable_hwid():
     """
-    Tạo HWID bằng cách sử dụng MAC Address (uuid.getnode()) và ID File System của Home Path.
+    Tạo HWID bằng cách ưu tiên SỬ DỤNG DUY NHẤT Đường dẫn Home (~), 
+    là thông số ổn định nhất trong Termux. (V12 FINAL)
     """
     try:
-        # 1. Lấy MAC Address (Duy nhất phần cứng)
-        # Sẽ thất bại trên nhiều môi trường ảo, nhưng nên thử
-        try:
-            mac_address = uuid.getnode() 
-            mac_string = f"{mac_address:x}"
-        except Exception:
-            mac_string = "MAC_READ_ERROR" # Fallback ổn định, không random
+        # 1. Thông số ổn định nhất: Home Directory Path
+        home_path = os.path.expanduser('~') 
         
-        # 2. Lấy Unique File System ID (Khó bị clone hơn Home Path)
-        # Sử dụng os.stat để lấy st_dev (Device ID) của thư mục Home
-        home_path = os.path.expanduser('~')
-        try:
-            stat_info = os.stat(home_path)
-            # st_dev: ID của thiết bị chứa file (ổn định)
-            device_id = str(stat_info.st_dev)
-        except Exception:
-            device_id = "STAT_READ_ERROR"
+        # Thêm một salt để đảm bảo HWID mới
+        raw_hwid_string = f"{home_path}-V12_ULTRA_STABLE_HOME_PATH" 
 
-        # 3. Kết hợp tất cả các yếu tố: Home Path (ổn định nhất) + MAC Address + File System ID
-        # HWID chỉ trùng khi TẤT CẢ 3 yếu tố này giống nhau.
-        raw_hwid_string = f"{home_path}-{mac_string}-{device_id}-V11_ULTRA_FIX" 
-
+        # 2. Băm (Hash)
         final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
         
         return final_hwid
 
-    except Exception:
-        # KHỐI DỰ PHÒNG TĨNH CUỐI CÙNG (Dù lỗi vẫn ra HWID ổn định)
-        print("Lỗikhi tạo HWID")
-        # Đây là lỗi chỉ xảy ra khi os.stat và uuid.getnode() đều lỗi
-        return hashlib.sha256("FINAL_STATIC_FALLBACK_HWID_V11".encode()).hexdigest()
+    except Exception as e:
+        # ⚠️ KHÔNG BAO GIỜ DÙNG UUID.UUID4 HOẶC BẤT KỲ DỮ LIỆU CÓ THỂ RANDOM NÀO
+        # Nếu Home Path bị lỗi khi đọc (cực kỳ hiếm), fallback về một HWID dự phòng tĩnh
+        # Điều này đảm bảo HWID sẽ luôn giống nhau, dù có thể bị trùng với máy khác nếu lỗi tương tự.
+        print(f"HWID: Lỗi  khi đọc Path: {e}.")
+        
+        # Chuỗi băm tĩnh dựa trên tên Tool của bạn
+        return hashlib.sha256("FINAL_TOOL_STATIC_HWID_ID_KHOINGUYEN".encode()).hexdigest()
 # Hàm Lấy IP
 def get_public_ip():
     try:
