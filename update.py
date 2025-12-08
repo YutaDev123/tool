@@ -36,7 +36,7 @@ except ImportError:
         "tabulate", 
         "certifi" 
     ])
-    print('__Cài đặt hoàn tất, vui lòng chạy lại Tool_')
+    print('__Cài đặt hoàn tất, vui lòng chạy lại Tool__')
     sys.exit()
 
 
@@ -236,48 +236,30 @@ def check_license_key_api(key: str, hwid: str, ip: str) -> dict:
 # Hàm Lấy HWID
 def get_stable_hwid():
     """
-    Tạo HWID bằng cách sử dụng Android ID/Serial độc nhất từ Termux API.
+    Tạo HWID bằng cách sử dụng MAC Address (uuid.getnode()) và Home Path.
+    Đây là phương pháp ổn định và ít bị trùng nhất. (V9 FINAL)
     """
     try:
-        # 1. Lấy thông tin thiết bị độc nhất từ termux-api
-        unique_device_id = "UNKNOWN_DEVICE_ID"
-        try:
-            # Lệnh termux-telephony-deviceinfo trả về JSON chứa các ID
-            result = subprocess.run(
-                ['termux-telephony-deviceinfo'], 
-                capture_output=True, 
-                text=True, 
-                timeout=5
-            )
-            
-            # 💡 FIX: Phân tích output JSON để lấy Android ID/Serial
-            device_data = json.loads(result.stdout.strip())
-            
-            # Ưu tiên lấy ID Android hoặc Serial Number (thường là unique)
-            # Tên key có thể là "device_id" hoặc "android_id"
-            if 'device_id' in device_data and device_data['device_id']:
-                unique_device_id = device_data['device_id']
-            elif 'subscriber_id' in device_data and device_data['subscriber_id']:
-                unique_device_id = device_data['subscriber_id']
-            else:
-                # Fallback nếu không lấy được ID cụ thể
-                unique_device_id = result.stdout.strip()
-
-        except Exception:
-            # Nếu lệnh termux-api lỗi (chưa cài hoặc thiếu quyền), unique_device_id giữ nguyên giá trị UNKNOWN
-            pass 
-
-        # 2. Sử dụng Home Path và ID độc nhất để tạo chuỗi băm
-        # Bỏ qua node_name vì nó thường bị trùng.
+        # 1. Lấy MAC Address của thiết bị (Độc nhất phần cứng)
+        # uuid.getnode() trả về địa chỉ MAC dạng số nguyên.
+        mac_address = uuid.getnode() 
+        # Chuyển sang chuỗi Hex để dễ dàng so sánh
+        mac_string = f"{mac_address:x}" 
+        
+        # 2. Lấy Home Path (Để tăng độ phức tạp và độ ổn định)
         home_path = os.path.expanduser('~') 
-        raw_hwid_string = f"{home_path}-{unique_device_id}-V8_SERIAL_FIX" 
 
-        # 3. Băm (Hash)
+        # 3. Kết hợp các yếu tố
+        raw_hwid_string = f"{home_path}-{mac_string}-V9_MAC_FIX" 
+
+        # 4. Băm (Hash)
         final_hwid = hashlib.sha256(raw_hwid_string.encode()).hexdigest()
+        
+        # 💡 DEBUG: Nếu muốn kiểm tra xem chuỗi MAC Address có khác nhau không, bạn có thể print mac_string ra.
         
         return final_hwid
     except Exception as e:
-        # Fallback về UUID ngẫu nhiên nếu có lỗi
+        # Fallback 
         return hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()
 # Hàm Lấy IP
 def get_public_ip():
